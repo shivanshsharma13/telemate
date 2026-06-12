@@ -1,44 +1,63 @@
-# [Project name]
+# Telegram File Explorer
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A production-quality file browser for Telegram channels — browse, search, filter, and bulk-download files stored in Telegram channels and groups, with a Google Drive-style interface.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
+- `python artifacts/api-server/main.py` — run the Python API server (port 8080)
+- `pnpm --filter @workspace/telegram-explorer run dev` — run the React frontend (port 22064)
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- **Frontend**: React + Vite + Tailwind CSS + shadcn/ui + wouter + TanStack Query
+- **Backend**: Python FastAPI + Uvicorn + Telethon (MTProto)
+- **Storage**: SQLite (aiosqlite) for channel/file metadata cache at `artifacts/api-server/data/cache.db`
+- **Session**: Telethon SQLite session at `artifacts/api-server/data/telegram.session`
+- **Downloads**: ZIP archives streamed via FastAPI FileResponse, temp files in `artifacts/api-server/downloads/`
+- **API Contract**: OpenAPI 3.1 at `lib/api-spec/openapi.yaml` → codegen generates React Query hooks + Zod schemas
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — single source of truth for all API contracts
+- `lib/api-client-react/src/generated/` — generated React Query hooks (do not edit)
+- `artifacts/api-server/main.py` — FastAPI app entry point
+- `artifacts/api-server/src/telegram_client.py` — Telethon client singleton + auth flow
+- `artifacts/api-server/src/database.py` — SQLite cache operations
+- `artifacts/api-server/src/routes/` — auth, channels, files, downloads routes
+- `artifacts/telegram-explorer/src/` — React frontend
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Python FastAPI replaces the Node.js api-server for native Telethon (MTProto) integration
+- SQLite used instead of PostgreSQL — no external DB needed; channel/file metadata is a cache, not source of truth
+- Download jobs are in-memory (not persisted); old job directories cleaned up on startup (>2h old)
+- File downloads: each file streamed to disk via Telethon, then zipped, then served via FileResponse — never fully loaded into RAM
+- OpenAPI spec drives codegen for the React frontend hooks; backend uses Pydantic models directly (no Zod)
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Auth**: multi-step Telegram OTP login (phone → code → optional 2FA password), session persisted across restarts
+- **Channels**: list all channels/groups, search/sort/filter, trigger sync from Telegram
+- **Files**: browse files per channel, filter by extension, sort by name/size/date, multi-select
+- **Downloads**: select files → download as ZIP; real-time progress polling; completed jobs show download link
 
-## User preferences
+## Required Secrets
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- `TELEGRAM_API_ID` — get from https://my.telegram.org/apps
+- `TELEGRAM_API_HASH` — get from https://my.telegram.org/apps
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- After the OpenAPI spec changes, always run `pnpm --filter @workspace/api-spec run codegen` before checking TypeScript
+- The api-zod barrel (`lib/api-zod/src/index.ts`) only exports from `generated/api` (not `generated/types`) to avoid TS2308 collisions — the codegen script patches this with `sed` automatically
+- The api-server workflow runs from `artifacts/api-server/` directory (not workspace root)
+- Channel sync and file sync are background tasks — trigger via API and poll for results
+- Download jobs are in-memory; server restart clears all active jobs
+
+## User preferences
+
+_Populate as you build._
 
 ## Pointers
 

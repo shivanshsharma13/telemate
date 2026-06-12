@@ -1,0 +1,2 @@
+- [Python api-server](python-api-server.md) — FastAPI replaces Node.js api-server; runs from artifacts/api-server/ dir (not workspace root); use `python main.py` not `python artifacts/api-server/main.py`
+- [Orval TS2308 fix](orval-ts2308-fix.md) — api-zod barrel must not export from generated/types; codegen script patches with sed; caused by parameter type naming collision

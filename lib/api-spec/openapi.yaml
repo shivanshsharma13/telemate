@@ -3,20 +3,27 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Telegram File Explorer API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: channels
+    description: Telegram channels and groups
+  - name: files
+    description: Files within channels
+  - name: downloads
+    description: Download management
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +31,530 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/status:
+    get:
+      operationId: getAuthStatus
+      tags: [auth]
+      summary: Get authentication status
+      responses:
+        "200":
+          description: Auth status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
+  /auth/send-code:
+    post:
+      operationId: sendCode
+      tags: [auth]
+      summary: Send OTP code to phone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PhoneInput"
+      responses:
+        "200":
+          description: Code sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
+  /auth/verify-code:
+    post:
+      operationId: verifyCode
+      tags: [auth]
+      summary: Verify OTP code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodeInput"
+      responses:
+        "200":
+          description: Code verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
+  /auth/verify-2fa:
+    post:
+      operationId: verify2fa
+      tags: [auth]
+      summary: Verify 2FA password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordInput"
+      responses:
+        "200":
+          description: 2FA verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
+  /channels:
+    get:
+      operationId: listChannels
+      tags: [channels]
+      summary: List channels and groups
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: order
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of channels
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelList"
+
+  /channels/stats:
+    get:
+      operationId: getChannelStats
+      tags: [channels]
+      summary: Get aggregate channel statistics
+      responses:
+        "200":
+          description: Channel stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelStats"
+
+  /channels/sync:
+    post:
+      operationId: syncChannels
+      tags: [channels]
+      summary: Sync channel list from Telegram
+      responses:
+        "200":
+          description: Sync started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncStatus"
+
+  /channels/{channelId}:
+    get:
+      operationId: getChannel
+      tags: [channels]
+      summary: Get a single channel
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Channel detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+        "404":
+          description: Not found
+
+  /channels/{channelId}/files:
+    get:
+      operationId: listChannelFiles
+      tags: [files]
+      summary: List files in a channel
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: extension
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: order
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: List of files
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileList"
+
+  /channels/{channelId}/stats:
+    get:
+      operationId: getChannelFileStats
+      tags: [files]
+      summary: Get file statistics for a channel
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: File stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileStats"
+
+  /channels/{channelId}/sync:
+    post:
+      operationId: syncChannelFiles
+      tags: [files]
+      summary: Sync all files for a channel from Telegram
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sync started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncStatus"
+
+  /downloads:
+    get:
+      operationId: listDownloads
+      tags: [downloads]
+      summary: List active download jobs
+      responses:
+        "200":
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DownloadJob"
+    post:
+      operationId: createDownload
+      tags: [downloads]
+      summary: Create a download job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DownloadRequest"
+      responses:
+        "201":
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadJob"
+
+  /downloads/{jobId}:
+    get:
+      operationId: getDownload
+      tags: [downloads]
+      summary: Get download job status
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadJob"
+        "404":
+          description: Not found
+    delete:
+      operationId: cancelDownload
+      tags: [downloads]
+      summary: Cancel a download job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Cancelled
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    AuthStatus:
+      type: object
+      required: [authenticated, step]
+      properties:
+        authenticated:
+          type: boolean
+        step:
+          type: string
+          enum: [unauthenticated, code_sent, two_fa_required, authenticated]
+        phone:
+          type: ["string", "null"]
+        username:
+          type: ["string", "null"]
+        first_name:
+          type: ["string", "null"]
+
+    PhoneInput:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+
+    CodeInput:
+      type: object
+      required: [phone, code]
+      properties:
+        phone:
+          type: string
+        code:
+          type: string
+
+    PasswordInput:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+
+    Channel:
+      type: object
+      required: [id, title, type, has_profile_photo]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        username:
+          type: ["string", "null"]
+        type:
+          type: string
+        member_count:
+          type: ["integer", "null"]
+        file_count:
+          type: ["integer", "null"]
+        total_size:
+          type: ["integer", "null"]
+        last_sync:
+          type: ["string", "null"]
+        has_profile_photo:
+          type: boolean
+
+    ChannelList:
+      type: object
+      required: [channels, total, page, page_size]
+      properties:
+        channels:
+          type: array
+          items:
+            $ref: "#/components/schemas/Channel"
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    ChannelStats:
+      type: object
+      required: [total_channels, total_files, total_size]
+      properties:
+        total_channels:
+          type: integer
+        total_files:
+          type: integer
+        total_size:
+          type: integer
+        last_sync:
+          type: ["string", "null"]
+
+    TelegramFile:
+      type: object
+      required: [message_id, channel_id, filename, extension, size, mime_type, date, is_document]
+      properties:
+        message_id:
+          type: integer
+        channel_id:
+          type: integer
+        filename:
+          type: string
+        extension:
+          type: string
+        size:
+          type: integer
+        mime_type:
+          type: string
+        date:
+          type: string
+        is_document:
+          type: boolean
+
+    FileList:
+      type: object
+      required: [files, total, page, page_size, total_size]
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/TelegramFile"
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_size:
+          type: integer
+
+    FileStats:
+      type: object
+      required: [total_files, total_size, synced]
+      properties:
+        total_files:
+          type: integer
+        total_size:
+          type: integer
+        synced:
+          type: boolean
+        last_sync:
+          type: ["string", "null"]
+        file_types:
+          type: object
+          additionalProperties:
+            type: integer
+
+    DownloadRequest:
+      type: object
+      required: [channel_id]
+      properties:
+        channel_id:
+          type: integer
+        message_ids:
+          type: ["array", "null"]
+          items:
+            type: integer
+        archive_name:
+          type: ["string", "null"]
+
+    DownloadJob:
+      type: object
+      required: [job_id, status, channel_id, total_files, downloaded_files, failed_files, total_size, downloaded_size, created_at]
+      properties:
+        job_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        channel_id:
+          type: integer
+        total_files:
+          type: integer
+        downloaded_files:
+          type: integer
+        failed_files:
+          type: integer
+        total_size:
+          type: integer
+        downloaded_size:
+          type: integer
+        error:
+          type: ["string", "null"]
+        created_at:
+          type: string
+        completed_at:
+          type: ["string", "null"]
+        download_url:
+          type: ["string", "null"]
+
+    SyncStatus:
+      type: object
+      required: [status, message]
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        task_id:
+          type: ["string", "null"]
