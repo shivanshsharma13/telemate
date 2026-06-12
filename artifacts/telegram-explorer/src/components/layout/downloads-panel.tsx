@@ -15,7 +15,7 @@ export function DownloadsPanel({ triggerClassName }: { triggerClassName?: string
   const queryClient = useQueryClient();
 
   const handleCancel = (jobId: string) => {
-    cancelDownload.mutate({ params: { jobId } }, {
+    cancelDownload.mutate({ jobId }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListDownloadsQueryKey() });
       }
