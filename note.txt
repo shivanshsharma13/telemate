@@ -1,0 +1,32 @@
+1 — Install dependencies
+# Clone and enter the repo, then:
+pnpm install
+pip install -r artifacts/api-server/requirements.txt
+
+2 — Set environment variables
+Create a .env file (or just export in your shell):
+
+export TELEGRAM_API_ID=12345678
+export TELEGRAM_API_HASH=your_hash_here
+
+3 — Run the backend
+Open a terminal in the repo root:
+
+cd artifacts/api-server
+TELEGRAM_API_ID=12345678 TELEGRAM_API_HASH=your_hash_here python main.py
+
+Runs on http://localhost:8080 by default. Change port with PORT=9000 python main.py.
+
+4 — Run the frontend
+Open a second terminal:
+
+pnpm --filter @workspace/telegram-explorer run dev
+
+Runs on http://localhost:5173 — open that in your browser. Vite will proxy all /api/... calls to the backend automatically.
+
+5 — First login
+On first run the backend has no session, so you'll be taken through the Telegram OTP login (phone number → code → optional 2FA password). The session is saved to artifacts/api-server/data/telegram.session and persists across restarts.
+
+One-time codegen (only needed if you change the API spec):
+
+pnpm --filter @workspace/api-spec run codegen
