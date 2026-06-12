@@ -8,6 +8,12 @@ import { AppLayout } from "@/components/layout/app-layout";
 import AuthPage from "@/pages/auth";
 import ChannelsPage from "@/pages/channels";
 import ChannelFilesPage from "@/pages/channel-files";
+import { setBaseUrl } from "@workspace/api-client-react";
+
+// Configure dynamic API base URL if specified in environment variables (for production deployments like Vercel)
+if (import.meta.env.VITE_API_URL) {
+  setBaseUrl(import.meta.env.VITE_API_URL);
+}
 
 const queryClient = new QueryClient();
 
