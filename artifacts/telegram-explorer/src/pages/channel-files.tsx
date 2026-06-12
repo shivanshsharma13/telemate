@@ -94,7 +94,7 @@ export default function ChannelFilesPage() {
 
   const handleSync = () => {
     setIsSyncing(true);
-    syncFiles.mutate({ params: { channelId } }, {
+    syncFiles.mutate({ channelId }, {
       onSuccess: () => {
         toast({
           title: "File sync started",
