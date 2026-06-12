@@ -76,6 +76,10 @@ class FileStats(BaseModel):
     file_types: Dict[str, int] = {}
 
 
+class ChannelLinkInput(BaseModel):
+    link: str
+
+
 class DownloadRequest(BaseModel):
     channel_id: int
     message_ids: Optional[List[int]] = None

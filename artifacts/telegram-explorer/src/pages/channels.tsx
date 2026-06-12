@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { 
   useListChannels, 
   useGetChannelStats, 
-  useSyncChannels, 
+  useSyncChannels,
+  useAddChannel,
   getListChannelsQueryKey,
   getGetChannelStatsQueryKey
 } from "@workspace/api-client-react";
@@ -15,21 +16,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 import { 
   Search, 
   RefreshCw, 
   Folder, 
-  Users, 
   FileText, 
   HardDrive,
   Database,
   Loader2,
-  ChevronRight
+  ChevronRight,
+  Plus,
+  Link as LinkIcon
 } from "lucide-react";
 
 export default function ChannelsPage() {
@@ -39,9 +50,12 @@ export default function ChannelsPage() {
   const [sort, setSort] = useState<string>("title");
   const [order, setOrder] = useState<string>("asc");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [channelLink, setChannelLink] = useState("");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -62,6 +76,34 @@ export default function ChannelsPage() {
   const { data: channelsData, isLoading } = useListChannels(queryParams, { query: { refetchInterval } });
   const { data: stats } = useGetChannelStats({ query: { refetchInterval } });
   const syncChannels = useSyncChannels();
+  const addChannel = useAddChannel();
+
+  const handleAddChannel = () => {
+    if (!channelLink.trim()) return;
+    addChannel.mutate(
+      { data: { link: channelLink.trim() } },
+      {
+        onSuccess: (channel) => {
+          toast({
+            title: "Channel added",
+            description: `"${channel.title}" has been added to your list.`,
+          });
+          queryClient.invalidateQueries({ queryKey: getListChannelsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetChannelStatsQueryKey() });
+          setChannelLink("");
+          setAddDialogOpen(false);
+          setLocation(`/channels/${channel.id}`);
+        },
+        onError: (err: any) => {
+          toast({
+            title: "Failed to add channel",
+            description: err?.data?.detail || err?.message || "Could not find or access that channel.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
 
   const handleSync = () => {
     setIsSyncing(true);
@@ -102,10 +144,20 @@ export default function ChannelsPage() {
             Browse and manage files across your Telegram chats
           </p>
         </div>
-        <Button onClick={handleSync} disabled={isSyncing} data-testid="button-sync-channels" variant={channelsData?.channels.length === 0 ? "default" : "outline"}>
-          {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-          {isSyncing ? "Syncing..." : "Sync from Telegram"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setAddDialogOpen(true)}
+            data-testid="button-add-channel"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Channel
+          </Button>
+          <Button onClick={handleSync} disabled={isSyncing} data-testid="button-sync-channels" variant={channelsData?.channels.length === 0 ? "default" : "outline"}>
+            {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            {isSyncing ? "Syncing..." : "Sync from Telegram"}
+          </Button>
+        </div>
       </div>
 
       <div className="p-6 flex-1 overflow-auto">
@@ -287,6 +339,60 @@ export default function ChannelsPage() {
           </div>
         </div>
       </div>
+      <Dialog open={addDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if (!open) setChannelLink(""); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LinkIcon className="h-5 w-5 text-primary" />
+              Add Channel by Link
+            </DialogTitle>
+            <DialogDescription>
+              Paste a Telegram channel or group link. Works with public channels — they don't need to be in your chat list.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="channel-link">Channel URL or username</Label>
+              <Input
+                id="channel-link"
+                placeholder="https://t.me/channel_name  or  @username"
+                value={channelLink}
+                onChange={(e) => setChannelLink(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleAddChannel(); }}
+                data-testid="input-channel-link"
+                autoFocus
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Accepted formats: <code className="bg-muted px-1 rounded text-xs">https://t.me/username</code>, <code className="bg-muted px-1 rounded text-xs">@username</code>, or just <code className="bg-muted px-1 rounded text-xs">username</code>
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddDialogOpen(false)} data-testid="button-cancel-add-channel">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddChannel}
+              disabled={!channelLink.trim() || addChannel.isPending}
+              data-testid="button-confirm-add-channel"
+            >
+              {addChannel.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Looking up...
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Channel
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

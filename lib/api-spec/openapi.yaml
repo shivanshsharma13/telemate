@@ -181,6 +181,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/SyncStatus"
 
+  /channels/add:
+    post:
+      operationId: addChannel
+      tags: [channels]
+      summary: Add a channel by URL, username, or invite link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChannelLinkInput"
+      responses:
+        "200":
+          description: Channel added successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+        "404":
+          description: Channel not found
+
   /channels/{channelId}:
     get:
       operationId: getChannel
@@ -504,6 +525,14 @@ components:
           type: object
           additionalProperties:
             type: integer
+
+    ChannelLinkInput:
+      type: object
+      required: [link]
+      properties:
+        link:
+          type: string
+          description: "Telegram channel URL (https://t.me/username), @username, or plain username"
 
     DownloadRequest:
       type: object

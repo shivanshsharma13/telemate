@@ -105,6 +105,11 @@ export interface FileStats {
   file_types?: FileStatsFileTypes;
 }
 
+export interface ChannelLinkInput {
+  /** Telegram channel URL (https://t.me/username), @username, or plain username */
+  link: string;
+}
+
 export interface DownloadRequest {
   channel_id: number;
   /** @nullable */

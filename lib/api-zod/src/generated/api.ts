@@ -144,6 +144,26 @@ export const SyncChannelsResponse = zod.object({
 
 
 /**
+ * @summary Add a channel by URL, username, or invite link
+ */
+export const AddChannelBody = zod.object({
+  "link": zod.string().describe('Telegram channel URL (https:\/\/t.me\/username), @username, or plain username')
+})
+
+export const AddChannelResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "username": zod.string().nullish(),
+  "type": zod.string(),
+  "member_count": zod.number().nullish(),
+  "file_count": zod.number().nullish(),
+  "total_size": zod.number().nullish(),
+  "last_sync": zod.string().nullish(),
+  "has_profile_photo": zod.boolean()
+})
+
+
+/**
  * @summary Get a single channel
  */
 export const GetChannelParams = zod.object({

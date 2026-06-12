@@ -22,6 +22,7 @@ import type {
 import type {
   AuthStatus,
   Channel,
+  ChannelLinkInput,
   ChannelList,
   ChannelStats,
   CodeInput,
@@ -715,6 +716,77 @@ export const useSyncChannels = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSyncChannelsMutationOptions(options));
+    }
+
+export const getAddChannelUrl = () => {
+
+
+
+
+  return `/api/channels/add`
+}
+
+/**
+ * @summary Add a channel by URL, username, or invite link
+ */
+export const addChannel = async (channelLinkInput: ChannelLinkInput, options?: RequestInit): Promise<Channel> => {
+
+  return customFetch<Channel>(getAddChannelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      channelLinkInput,)
+  }
+);}
+
+
+
+
+export const getAddChannelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addChannel>>, TError,{data: BodyType<ChannelLinkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addChannel>>, TError,{data: BodyType<ChannelLinkInput>}, TContext> => {
+
+const mutationKey = ['addChannel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addChannel>>, {data: BodyType<ChannelLinkInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  addChannel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddChannelMutationResult = NonNullable<Awaited<ReturnType<typeof addChannel>>>
+    export type AddChannelMutationBody = BodyType<ChannelLinkInput>
+    export type AddChannelMutationError = ErrorType<void>
+
+    /**
+ * @summary Add a channel by URL, username, or invite link
+ */
+export const useAddChannel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addChannel>>, TError,{data: BodyType<ChannelLinkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addChannel>>,
+        TError,
+        {data: BodyType<ChannelLinkInput>},
+        TContext
+      > => {
+      return useMutation(getAddChannelMutationOptions(options));
     }
 
 export const getGetChannelUrl = (channelId: number,) => {

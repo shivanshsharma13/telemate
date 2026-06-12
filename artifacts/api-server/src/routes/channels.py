@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
-from ..models import Channel, ChannelList, ChannelStats, SyncStatus
+from ..models import Channel, ChannelList, ChannelStats, SyncStatus, ChannelLinkInput
 from ..telegram_client import telegram_client
 from ..database import (
     upsert_channels,
@@ -87,6 +87,56 @@ async def list_channels(
         page=page,
         page_size=page_size,
     )
+
+
+@router.post("/channels/add", response_model=Channel)
+async def add_channel(body: ChannelLinkInput):
+    if not await telegram_client.is_authorized():
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    link = body.link.strip()
+
+    # Parse the identifier from various formats
+    if "t.me/" in link:
+        path = link.split("t.me/", 1)[1].strip("/")
+        identifier = path.split("/")[0]
+    elif link.startswith("@"):
+        identifier = link[1:]
+    else:
+        identifier = link
+
+    if not identifier:
+        raise HTTPException(status_code=400, detail="Invalid channel link or username")
+
+    try:
+        client = telegram_client.get_client()
+        entity = await client.get_entity(identifier)
+
+        entity_type_name = type(entity).__name__.lower()
+        etype = "channel" if "channel" in entity_type_name else "group"
+
+        row = {
+            "id": entity.id,
+            "title": getattr(entity, "title", identifier),
+            "username": getattr(entity, "username", None),
+            "type": etype,
+            "member_count": getattr(entity, "participants_count", None),
+            "has_profile_photo": entity.photo is not None,
+        }
+        await upsert_channels([row])
+
+        ch = await get_channel_by_id(entity.id)
+        if not ch:
+            raise HTTPException(status_code=500, detail="Failed to save channel")
+        return Channel(**ch)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"add_channel error for '{identifier}': {e}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Could not find or access channel '{identifier}': {str(e)}",
+        )
 
 
 @router.get("/channels/{channel_id}", response_model=Channel)
